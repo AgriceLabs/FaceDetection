@@ -1,31 +1,33 @@
 {
-  "name": "viola-jones-face-detection",
-  "version": "0.1.0",
-  "private": true,
+  "name": "viola-jones-livestream-cli",
+  "version": "1.0.0",
+  "description": "CLI tool for real-time face detection on YouTube livestreams using Viola-Jones algorithm",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+  "bin": {
+    "vj-detect": "./dist/index.js"
   },
+  "scripts": {
+    "start": "node --loader ts-node/esm src/index.ts",
+    "build": "tsc",
+    "dev": "tsx src/index.ts"
+  },
+  "keywords": [
+    "viola-jones",
+    "face-detection",
+    "youtube",
+    "livestream",
+    "cli"
+  ],
   "dependencies": {
-    "@radix-ui/react-label": "^2.1.7",
-    "@radix-ui/react-select": "^2.2.6",
-    "@radix-ui/react-slot": "^1.2.3",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.545.0",
-    "react": "^19",
-    "react-dom": "^19",
-    "tailwind-merge": "^3.3.1"
+    "commander": "^12.1.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.1.1"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@vitejs/plugin-react": "^5.1.0",
-    "autoprefixer": "^10.4.21",
-    "tailwindcss": "^3",
-    "vite": "^7.1.12"
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "tsx": "^4.19.2",
+    "ts-node": "^10.9.2"
   }
 }

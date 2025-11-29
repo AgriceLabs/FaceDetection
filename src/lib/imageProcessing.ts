@@ -1,4 +1,4 @@
-import type { ProcessedImage } from './types';
+import type { ProcessedImage } from './types.js';
 
 // Reusable arrays to prevent memory churn (allocated once and reused every frame)
 let cachedIntegralMatrix: number[][] | null = null;

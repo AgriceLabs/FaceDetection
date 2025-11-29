@@ -1,5 +1,5 @@
-import type { Detection, StumpJSON } from './types';
-import { Stump, HaarFeature } from './haarFeature';
+import type { Detection, StumpJSON } from './types.js';
+import { Stump, HaarFeature } from './haarFeature.js';
 
 const WINDOW_SIZE = 24;
 

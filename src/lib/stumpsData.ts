@@ -1,4 +1,4 @@
-import type { StumpJSON } from "./types";
+import type { StumpJSON } from "./types.js";
 
 export const stumpsJSON: StumpJSON[] = [
   {

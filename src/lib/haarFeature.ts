@@ -1,4 +1,4 @@
-import { FeatureType, type FeatureTypeValue } from './types';
+import { FeatureType, type FeatureTypeValue } from './types.js';
 
 export class Stump {
   feature: HaarFeature;
