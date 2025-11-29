@@ -6,7 +6,6 @@ import type { Detection } from '../lib/types.js';
 export interface StreamProcessorConfig {
   streamUrl: string;
   detector: FaceDetector;
-  outputPath?: string;
   displayEnabled?: boolean;
   fps?: number;
   verbose?: boolean;
@@ -33,7 +32,6 @@ export class StreamProcessor {
     this.config = {
       streamUrl: config.streamUrl,
       detector: config.detector,
-      outputPath: config.outputPath ?? '',
       displayEnabled: config.displayEnabled ?? true,
       fps: config.fps ?? 30,
       verbose: config.verbose ?? false,

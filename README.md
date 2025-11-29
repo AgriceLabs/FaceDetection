@@ -1,43 +1,22 @@
 # Viola-Jones Livestream Face Detection CLI
 
-Real-time face detection on YouTube livestreams using the Viola-Jones algorithm.
+Real-time Viola-Jones face detection on YouTube livestreams with a minimal FFmpeg + MPV pipeline and temporal stabilization.
 
 ## Features
+- 6000-stump Viola-Jones cascade written in TypeScript
+- `yt-dlp` + FFmpeg ingest to raw RGBA frames (720p by default)
+- Temporal tracker that stabilizes detections frame-to-frame
+- Direct pixel overlays (no canvas/sharp) for low overhead
+- MPV preview with headless `--no-display` option
+- Works with Node.js or Bun
 
-- **Viola-Jones Algorithm**: Classic cascade classifier with 6000 trained stumps
-- **YouTube Livestream Support**: Automatically extracts m3u8 URLs from YouTube live videos
-- **Real-time Detection**: Process livestreams with configurable FPS
-- **MPV Integration**: View detected faces in real-time
-- **TypeScript**: Fully typed codebase
-- **CLI Interface**: Easy-to-use command-line tool
+## Requirements
+- Node.js 18+ or Bun
+- `ffmpeg` available on PATH
+- `mpv` (unless you use `--no-display`)
+- `yt-dlp` for resolving livestream URLs
 
-## Architecture
-
-**Real-time face detection with live box overlay (just like webcam mode!)**
-
-```
-YouTube Live → yt-dlp → Stream URL
-    ↓
-FFmpeg extracts RGBA frames @ 10 FPS
-    ↓
-Viola-Jones Detection (6000 stumps)
-    ↓
-Draw green boxes directly on pixels (fast!)
-    ↓
-FFmpeg encodes (ultrafast preset)
-    ↓
-MPV displays with boxes
-```
-
-## Prerequisites
-
-- **Node.js 18+** or **Bun** runtime
-- **FFmpeg** installed and available in PATH
-- **MPV** player (for display)
-- **yt-dlp** (for YouTube URL extraction)
-
-### Install Dependencies
-
+Install the native tools:
 ```bash
 # Fedora/RHEL
 sudo dnf install ffmpeg mpv yt-dlp
@@ -49,125 +28,87 @@ sudo apt install ffmpeg mpv yt-dlp
 brew install ffmpeg mpv yt-dlp
 ```
 
-## Installation
-
+## Setup
 ```bash
-# Install dependencies
+# Install JS deps
 bun install
 
-# Build the project
+# Optional: build to dist/ for the CLI bin target
 bun run build
 ```
 
 ## Usage
-
-### Basic Usage
-
 ```bash
-# Run with Bun
+# Dev / watch mode
 bun run dev "https://www.youtube.com/watch?v=VIDEO_ID"
 
-# Or use tsx directly
-tsx src/index.ts "https://www.youtube.com/watch?v=VIDEO_ID"
+# After building
+node dist/index.js "https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
-### Options
-
+Options:
 ```
 Usage: vj-detect [options] <youtube-url>
 
-Real-time face detection on YouTube livestreams using Viola-Jones algorithm
-
-Arguments:
-  youtube-url              YouTube livestream URL
-
 Options:
-  -o, --output <path>      Output stream to file (optional)
-  -s, --scale <number>     Detection scale (default: 1.0)
-  -t, --threshold <number> Detection threshold (default: 300)
-  --no-display             Disable MPV display
-  --fps <number>           Processing FPS (default: 10)
-  -v, --verbose            Verbose logging
-  -h, --help               Display help for command
+  -t, --threshold <number>  Detection threshold (default: 150)
+  --fps <number>            Processing FPS (default: 10)
+  --no-display              Disable MPV display
+  -v, --verbose             Verbose logging
+  -h, --help                Display help for command
 ```
 
-### Examples
-
+Examples:
 ```bash
-# Basic detection with MPV display
+# Default settings with display
 bun run dev "https://www.youtube.com/watch?v=cH7VBI4QQzA"
 
-# Save to file without display
-bun run dev "https://www.youtube.com/watch?v=cH7VBI4QQzA" -o output.ts --no-display
+# Headless run, verbose logs, slightly higher FPS
+bun run dev "https://www.youtube.com/watch?v=cH7VBI4QQzA" --no-display --fps 12 -v
 
-# Verbose mode with custom threshold
-bun run dev "https://www.youtube.com/watch?v=cH7VBI4QQzA" -v -t 500
+# Stricter detections
+bun run dev "https://www.youtube.com/watch?v=cH7VBI4QQzA" -t 400
+```
 
-# Higher FPS for more detections
-bun run dev "https://www.youtube.com/watch?v=cH7VBI4QQzA" --fps 15
+## Pipeline
+```
+YouTube Live URL
+  ↓ yt-dlp resolves HLS URL
+FFmpeg → raw RGBA frames (1280x720 @ FPS)
+  ↓
+Viola-Jones detector (6000 stumps)
+  ↓
+Temporal tracker (optical-flow aided smoothing)
+  ↓
+Green boxes drawn directly into RGBA buffer
+  ↓
+FFmpeg re-encodes → MPV (or stdout when headless)
 ```
 
 ## Project Structure
-
 ```
 src/
-├── lib/                  # Core Viola-Jones implementation (preserved)
-│   ├── types.ts         # Type definitions
-│   ├── haarFeature.ts   # Haar feature extraction
-│   ├── imageProcessing.ts # Integral image conversion
-│   ├── faceDetection.ts # Detection algorithm
-│   └── stumpsData.ts    # Trained cascade (6000 stumps, 999KB)
-├── youtube/
-│   └── streamExtractor.ts # YouTube m3u8 URL extraction
-├── video/
-│   └── streamProcessor.ts # FFmpeg pipeline & frame processing
 ├── detection/
-│   └── detector.ts       # Face detector wrapper
-└── index.ts             # CLI entry point
+│   ├── detector.ts         # Viola-Jones wrapper
+│   └── temporalTracker.ts  # Frame-to-frame stabilizer
+├── lib/                    # Core cascade implementation
+│   ├── faceDetection.ts
+│   ├── haarFeature.ts
+│   ├── imageProcessing.ts
+│   ├── stumpsData.ts
+│   └── types.ts
+├── video/streamProcessor.ts # FFmpeg ingest/egress + overlays
+├── youtube/streamExtractor.ts # Stream URL via yt-dlp
+└── index.ts                # CLI entry point
 ```
 
-## How It Works
-
-1. **Stream Extraction**: Uses `youtubei.js` to get HLS manifest (m3u8) URL from YouTube
-2. **Frame Extraction**: FFmpeg extracts frames from livestream at specified FPS
-3. **Face Detection**: Each frame is processed using Viola-Jones algorithm
-   - Converts to integral image for fast computation
-   - Multi-scale sliding window detection
-   - 6000 weak classifiers organized in 7 stages
-   - Non-maximum suppression to filter overlapping detections
-4. **Box Overlay**: Detection boxes drawn using Sharp + SVG overlay
-5. **Output**: Re-encoded stream piped to MPV or saved to file
-
-## Performance Tips
-
-- Lower `--fps` (5-10) for real-time performance
-- Increase `--threshold` to reduce false positives
-- Use `--no-display` when saving to file for better performance
-- Adjust resolution by modifying `width` and `height` in StreamProcessorConfig
+## Tips & Notes
+- 8–12 FPS keeps CPU reasonable; bump if your machine can handle it.
+- Raise `--threshold` to cut false positives; lower it to catch more faces.
+- Default resolution is 1280x720. Drop it in `StreamProcessor` if you need less load.
+- `--no-display` still runs the pipeline without piping to MPV.
 
 ## Troubleshooting
-
-### "MPV not found"
-Install MPV or use `--no-display` flag
-
-### "FFmpeg not found"
-Install FFmpeg and ensure it's in your PATH
-
-### "Failed to get stream URL"
-- Check if the video is actually a live stream
-- Try the video URL directly in a browser
-- Some streams may have geo-restrictions
-
-### Low FPS / Performance Issues
-- Reduce processing FPS: `--fps 5`
-- Lower detection threshold: `-t 200`
-- Check CPU usage - Viola-Jones is CPU-intensive
-
-## Credits
-
-Original Viola-Jones web implementation by Barudak Penguin
-
-## Donation
-
-### BTC, USDT, DOGE (BEP20)
-0x673d80b53ddda715274688ecf9ab210dc5bf2fba
+- **MPV not found**: Install MPV or run with `--no-display`.
+- **FFmpeg not found**: Ensure `ffmpeg` is installed and on PATH.
+- **Failed to get stream URL**: Confirm the video is live and accessible in your region; verify `yt-dlp` works on the URL.

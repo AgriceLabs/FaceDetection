@@ -5,7 +5,6 @@ import type { Detection } from '../lib/types.js';
 
 export interface DetectorConfig {
   threshold?: number;
-  scale?: number;
   stepSize?: number;
   maxScale?: number;
   scaleStep?: number;
@@ -29,7 +28,6 @@ export class FaceDetector {
   constructor(config: DetectorConfig = {}) {
     this.config = {
       threshold: config.threshold ?? 300,
-      scale: config.scale ?? 1.0,
       stepSize: config.stepSize ?? 2,
       maxScale: config.maxScale ?? 3,
       scaleStep: config.scaleStep ?? 1,

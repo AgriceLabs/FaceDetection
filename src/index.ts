@@ -14,8 +14,6 @@ program
   .description('Real-time face detection on YouTube livestreams using Viola-Jones algorithm')
   .version('1.0.0')
   .argument('<youtube-url>', 'YouTube livestream URL')
-  .option('-o, --output <path>', 'Output stream to file (optional)')
-  .option('-s, --scale <number>', 'Detection scale (default: 1.0)', '1.0')
   .option('-t, --threshold <number>', 'Detection threshold (default: 150)', '150')
   .option('--no-display', 'Disable MPV display')
   .option('--fps <number>', 'Processing FPS (default: 10)', '10')
@@ -33,7 +31,6 @@ program
       spinner.start('Initializing Viola-Jones face detector...');
       const detector = new FaceDetector({
         threshold: parseInt(options.threshold),
-        scale: parseFloat(options.scale),
         verbose: options.verbose,
       });
       await detector.initialize();
@@ -44,7 +41,6 @@ program
       const processor = new StreamProcessor({
         streamUrl,
         detector,
-        outputPath: options.output,
         displayEnabled: options.display,
         fps: parseInt(options.fps),
         verbose: options.verbose,
