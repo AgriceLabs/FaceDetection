@@ -30,6 +30,8 @@ export interface Detection {
   y: number;
   scaleFactor: number;
   confidency: number;
+  id?: number;
+  stableConfidence?: number;
 }
 
 export interface ProcessedImage {

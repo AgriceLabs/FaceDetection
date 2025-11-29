@@ -1,5 +1,6 @@
 import { spawn, ChildProcess } from 'child_process';
 import { FaceDetector } from '../detection/detector.js';
+import { TemporalTracker, type TemporalTrackerConfig } from '../detection/temporalTracker.js';
 import type { Detection } from '../lib/types.js';
 
 export interface StreamProcessorConfig {
@@ -11,6 +12,7 @@ export interface StreamProcessorConfig {
   verbose?: boolean;
   width?: number;
   height?: number;
+  trackingConfig?: TemporalTrackerConfig;
 }
 
 /**
@@ -22,6 +24,7 @@ export class StreamProcessor {
   private frameCount = 0;
   private faceCount = 0;
   private running = false;
+  private tracker: TemporalTracker;
   private ffmpegInput: ChildProcess | null = null;
   private ffmpegOutput: ChildProcess | null = null;
   private mpvProcess: ChildProcess | null = null;
@@ -34,9 +37,12 @@ export class StreamProcessor {
       displayEnabled: config.displayEnabled ?? true,
       fps: config.fps ?? 10,
       verbose: config.verbose ?? false,
-      width: config.width ?? 640,
-      height: config.height ?? 480,
+      width: config.width ?? 1280,
+      height: config.height ?? 720,
+      trackingConfig: config.trackingConfig ?? {},
     };
+
+    this.tracker = new TemporalTracker(this.config.trackingConfig);
   }
 
   /**
@@ -68,6 +74,7 @@ export class StreamProcessor {
     // Input: Extract RGBA frames
     this.ffmpegInput = spawn('ffmpeg', [
       '-i', this.config.streamUrl,
+      '-vf', 'scale=-2:720:flags=lanczos',
       '-f', 'rawvideo',
       '-pix_fmt', 'rgba',
       '-s', `${this.config.width}x${this.config.height}`,
@@ -85,8 +92,14 @@ export class StreamProcessor {
       '-r', this.config.fps.toString(),
       '-i', 'pipe:0',
       '-c:v', 'libx264',
-      '-preset', 'ultrafast',
-      '-tune', 'zerolatency',
+      '-b:v', '4000k',
+      '-maxrate', '5000k',
+      '-bufsize', '8000k',
+      '-crf', '23',
+      '-preset', 'veryfast',
+      '-tune', 'film',
+      '-profile:v', 'high',
+      '-level', '4.2',
       '-pix_fmt', 'yuv420p',
       '-f', 'mpegts',
       'pipe:1',
@@ -156,14 +169,21 @@ export class StreamProcessor {
       this.config.height
     );
 
-    this.faceCount += result.faces.length;
+    const stabilizedFaces = this.tracker.update(
+      rgbaData,
+      this.config.width,
+      this.config.height,
+      result.faces
+    );
+
+    this.faceCount += stabilizedFaces.length;
 
     // Draw boxes directly on frame data
-    if (result.faces.length > 0) {
-      this.drawBoxes(rgbaData, result.faces);
+    if (stabilizedFaces.length > 0) {
+      this.drawBoxes(rgbaData, stabilizedFaces);
 
       if (this.frameCount % 30 === 0) {
-        console.log(`[Frame ${this.frameCount}] ${result.faces.length} face(s) | Total: ${this.faceCount}`);
+        console.log(`[Frame ${this.frameCount}] ${stabilizedFaces.length} face(s) | Total: ${this.faceCount}`);
       }
     }
 

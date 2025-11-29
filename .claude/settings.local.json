@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun run build:*)",
+      "Bash(tree:*)",
+      "WebSearch",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(bun install:*)",
+      "Bash(chmod:*)",
+      "Bash(node dist/index.js:*)",
+      "Bash(timeout 30 bun run dev:*)",
+      "Bash(timeout 30 node:*)",
+      "Bash(timeout 60 bun run dev:*)",
+      "Bash(timeout 20 bun run dev:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
