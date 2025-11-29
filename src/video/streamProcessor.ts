@@ -35,7 +35,7 @@ export class StreamProcessor {
       detector: config.detector,
       outputPath: config.outputPath ?? '',
       displayEnabled: config.displayEnabled ?? true,
-      fps: config.fps ?? 10,
+      fps: config.fps ?? 30,
       verbose: config.verbose ?? false,
       width: config.width ?? 1280,
       height: config.height ?? 720,

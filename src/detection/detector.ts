@@ -30,9 +30,9 @@ export class FaceDetector {
     this.config = {
       threshold: config.threshold ?? 300,
       scale: config.scale ?? 1.0,
-      stepSize: config.stepSize ?? 4,
-      maxScale: config.maxScale ?? 2,
-      scaleStep: config.scaleStep ?? 1.5,
+      stepSize: config.stepSize ?? 2,
+      maxScale: config.maxScale ?? 3,
+      scaleStep: config.scaleStep ?? 1,
       verbose: config.verbose ?? false,
     };
   }
