@@ -1,10 +1,11 @@
 # Viola-Jones Livestream Face Detection CLI
 
-Real-time Viola-Jones face detection on YouTube livestreams with a minimal FFmpeg + MPV pipeline and temporal stabilization.
+Real-time Viola-Jones face detection on YouTube livestreams, direct video URLs, or local files with a minimal FFmpeg + MPV pipeline and temporal stabilization.
 
 ## Features
 - 6000-stump Viola-Jones cascade written in TypeScript
-- `yt-dlp` + FFmpeg ingest to raw RGBA frames (720p by default)
+- `yt-dlp` resolves YouTube URLs; direct URLs and local files are supported
+- FFmpeg ingest to raw RGBA frames (720p by default)
 - Temporal tracker that stabilizes detections frame-to-frame
 - Direct pixel overlays (no canvas/sharp) for low overhead
 - MPV preview with headless `--no-display` option
@@ -14,7 +15,7 @@ Real-time Viola-Jones face detection on YouTube livestreams with a minimal FFmpe
 - Node.js 18+ or Bun
 - `ffmpeg` available on PATH
 - `mpv` (unless you use `--no-display`)
-- `yt-dlp` for resolving livestream URLs
+- `yt-dlp` for resolving YouTube URLs
 
 Install the native tools:
 ```bash
@@ -39,8 +40,14 @@ bun run build
 
 ## Usage
 ```bash
-# Dev / watch mode
+# Dev / watch mode (YouTube)
 bun run dev "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# Direct URL (.mp4 or .m3u8)
+bun run dev "https://example.com/video.m3u8"
+
+# Local file
+bun run dev "/path/to/video.mp4"
 
 # After building
 node dist/index.js "https://www.youtube.com/watch?v=VIDEO_ID"
@@ -48,7 +55,7 @@ node dist/index.js "https://www.youtube.com/watch?v=VIDEO_ID"
 
 Options:
 ```
-Usage: vj-detect [options] <youtube-url>
+Usage: vj-detect [options] <input>
 
 Options:
   -t, --threshold <number>  Detection threshold (default: 150)
@@ -60,14 +67,14 @@ Options:
 
 Examples:
 ```bash
-# Default settings with display
+# Default settings with display (YouTube)
 bun run dev "https://www.youtube.com/watch?v=cH7VBI4QQzA"
 
-# Headless run, verbose logs, slightly higher FPS
-bun run dev "https://www.youtube.com/watch?v=cH7VBI4QQzA" --no-display --fps 12 -v
+# Direct m3u8 URL
+bun run dev "https://example.com/stream.m3u8" --no-display
 
-# Stricter detections
-bun run dev "https://www.youtube.com/watch?v=cH7VBI4QQzA" -t 400
+# Local file
+bun run dev "./samples/clip.mp4" -t 400
 ```
 
 ## Pipeline

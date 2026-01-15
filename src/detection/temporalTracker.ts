@@ -17,6 +17,7 @@ interface TrackState {
   stableConfidence: number;
   velocity: { x: number; y: number };
   misses: number;
+  hits: number;
 }
 
 /**
@@ -85,12 +86,18 @@ export class TemporalTracker {
         id: trackId,
       };
 
+      const hits = match ? match.hits + 1 : 1;
+      stabilizedDetection.hits = hits;
+      stabilizedDetection.misses = 0;
+      stabilizedDetection.isPredicted = false;
+
       nextTracks.set(trackId, {
         id: trackId,
         detection: stabilizedDetection,
         stableConfidence,
         velocity,
         misses: 0,
+        hits,
       });
 
       if (match) matchedIds.add(match.id);
@@ -111,6 +118,9 @@ export class TemporalTracker {
           confidency: decayedConfidence,
           stableConfidence: decayedConfidence,
           id,
+          hits: track.hits,
+          misses: track.misses + 1,
+          isPredicted: true,
         };
 
         nextTracks.set(id, {
@@ -118,6 +128,7 @@ export class TemporalTracker {
           detection: carried,
           stableConfidence: decayedConfidence,
           misses: track.misses + 1,
+          hits: track.hits,
         });
 
         stabilized.push(carried);

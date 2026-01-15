@@ -21,12 +21,20 @@ export interface StreamProcessorConfig {
 export class StreamProcessor {
   private config: Required<StreamProcessorConfig>;
   private frameCount = 0;
-  private faceCount = 0;
+  private uniqueFaceCount = 0;
+  private countedTrackIds = new Set<number>();
+  private lastDetections = new Map<number, Detection>();
   private running = false;
   private tracker: TemporalTracker;
   private ffmpegInput: ChildProcess | null = null;
   private ffmpegOutput: ChildProcess | null = null;
   private mpvProcess: ChildProcess | null = null;
+
+  private static readonly MIN_HITS_TO_COUNT = 4;
+  private static readonly MIN_FACE_SIZE = 24;
+  private static readonly MAX_FACE_SIZE_RATIO = 0.65;
+  private static readonly MAX_CENTER_JUMP_RATIO = 0.35;
+  private static readonly MAX_SIZE_CHANGE_RATIO = 0.4;
 
   constructor(config: StreamProcessorConfig) {
     this.config = {
@@ -174,18 +182,83 @@ export class StreamProcessor {
       result.faces
     );
 
-    this.faceCount += stabilizedFaces.length;
+    const uniqueFacesThisFrame = this.updateUniqueCounts(stabilizedFaces);
 
     // Draw boxes directly on frame data
     if (stabilizedFaces.length > 0) {
       this.drawBoxes(rgbaData, stabilizedFaces);
 
       if (this.frameCount % 30 === 0) {
-        console.log(`[Frame ${this.frameCount}] ${stabilizedFaces.length} face(s) | Total: ${this.faceCount}`);
+        console.log(`[Frame ${this.frameCount}] ${stabilizedFaces.length} face(s) | Unique: ${this.uniqueFaceCount}${uniqueFacesThisFrame > 0 ? ` (+${uniqueFacesThisFrame})` : ''}`);
       }
     }
 
     return frameData;
+  }
+
+  /**
+   * Update unique face counts based on tracked IDs.
+   */
+  private updateUniqueCounts(faces: Detection[]): number {
+    let newCounts = 0;
+    const minFrameSide = Math.min(this.config.width, this.config.height);
+    const maxFaceSize = minFrameSide * StreamProcessor.MAX_FACE_SIZE_RATIO;
+
+    for (const face of faces) {
+      if (!face.id) continue;
+      if (this.countedTrackIds.has(face.id)) continue;
+      if (face.isPredicted) continue;
+
+      const faceSize = 24 * face.scaleFactor;
+      if (faceSize < StreamProcessor.MIN_FACE_SIZE || faceSize > maxFaceSize) {
+        continue;
+      }
+
+      const hits = face.hits ?? 0;
+      if (hits < StreamProcessor.MIN_HITS_TO_COUNT) {
+        continue;
+      }
+
+      const last = this.lastDetections.get(face.id);
+      if (last) {
+        const lastSize = 24 * last.scaleFactor;
+        const centerJump = this.centerDistance(face, last);
+        const sizeChange = Math.abs(faceSize - lastSize) / Math.max(lastSize, 1);
+
+        if (centerJump > faceSize * StreamProcessor.MAX_CENTER_JUMP_RATIO) {
+          continue;
+        }
+
+        if (sizeChange > StreamProcessor.MAX_SIZE_CHANGE_RATIO) {
+          continue;
+        }
+      }
+
+      this.countedTrackIds.add(face.id);
+      this.uniqueFaceCount += 1;
+      newCounts += 1;
+    }
+
+    for (const face of faces) {
+      if (face.id && !face.isPredicted) {
+        this.lastDetections.set(face.id, face);
+      }
+    }
+
+    return newCounts;
+  }
+
+  private centerDistance(current: Detection, previous: Detection): number {
+    const currentSize = 24 * current.scaleFactor;
+    const previousSize = 24 * previous.scaleFactor;
+    const currentCenterX = current.x + currentSize / 2;
+    const currentCenterY = current.y + currentSize / 2;
+    const previousCenterX = previous.x + previousSize / 2;
+    const previousCenterY = previous.y + previousSize / 2;
+
+    const dx = currentCenterX - previousCenterX;
+    const dy = currentCenterY - previousCenterY;
+    return Math.hypot(dx, dy);
   }
 
   /**
@@ -289,9 +362,9 @@ export class StreamProcessor {
     console.log('\n══════════════════════════════════════');
     console.log('✅ Processing stopped');
     console.log(`📊 Frames: ${this.frameCount}`);
-    console.log(`👤 Faces: ${this.faceCount}`);
+    console.log(`👤 Unique faces: ${this.uniqueFaceCount}`);
     if (this.frameCount > 0) {
-      console.log(`📈 Avg: ${(this.faceCount / this.frameCount).toFixed(2)}/frame`);
+      console.log(`📈 Avg unique: ${(this.uniqueFaceCount / this.frameCount).toFixed(2)}/frame`);
     }
     console.log('══════════════════════════════════════');
   }

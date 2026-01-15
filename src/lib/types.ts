@@ -32,6 +32,9 @@ export interface Detection {
   confidency: number;
   id?: number;
   stableConfidence?: number;
+  hits?: number;
+  misses?: number;
+  isPredicted?: boolean;
 }
 
 export interface ProcessedImage {
